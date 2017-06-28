@@ -2,7 +2,7 @@ from collections import namedtuple
 import csv
 
 infile = '../data/all_stop_info.csv'
-outfile = '../data/stops.csv'
+outfile = '../data/2017_stops.csv'
 
 
 def bus_stops(filename):
