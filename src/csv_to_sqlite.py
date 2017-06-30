@@ -9,11 +9,16 @@ from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from filereader import read_csv
+
 
 class Cfg:
     files = glob(expanduser('~') + '/datasets/BusData/*.gz')
+    db_server = 'sqlite:///'
     db_location = expanduser('~') + '/db/'
     db_name = 'db.db'
+    # the number of records to be written to the database at once.
+    batch_size = 10000
 
 
 Base = declarative_base()
@@ -39,18 +44,10 @@ class BusData(Base):
     atStop = Column(Integer)
 
 
-ROW = namedtuple('Row', ['timestamp', 'lineId', 'direction',
+Row = namedtuple('Row', ['timestamp', 'lineId', 'direction',
                          'journeyPatternId', 'timeFrame', 'vehicleJourneyId', 'operator',
                          'conjestion', 'lon', 'lat', 'delay', 'blockId', 'vehicleId', 'stopId',
                          'atStop'])
-
-
-def get_rows(filenames):
-    for fname in filenames:
-        with gzip.open(fname, 'rt') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                yield ROW(*row)
 
 
 def batch(iterable, batch_size):
@@ -74,11 +71,9 @@ def main():
     if not isdir(Cfg.db_location):
         mkdir(Cfg.db_location)
 
-    engine = create_engine('sqlite:///' + Cfg.db_location + Cfg.db_name)
-    Base.metadata.create_all(engine)
+    # TODO: THIS IS BROKEN. NEEDS FIXING. CONSIDER USING ITERTOOLS.CHAIN
+    rows = (yield next(read_csv(fname, Row)) for fname in Cfg.files)
 
-    session = sessionmaker(bind=engine)()
-    rows = get_rows(Cfg.files)
     records = (BusData(
         timestamp=item.timestamp,
         lineId=item.lineId,
@@ -97,7 +92,13 @@ def main():
         atStop=item.atStop
     ) for item in rows)
 
-    batches = batch(records, 10000)
+    # batch size chosen arbitrarily. What's the maximim we can use?
+    batches = batch(records, Cfg.batch_size)
+
+    engine = create_engine(Cfg.db_server + Cfg.db_location + Cfg.db_name)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+
     count = 0
     for b in batches:
         session.bulk_save_objects(b)
@@ -105,6 +106,8 @@ def main():
         print('\r{} rows written to table'.format(count), end='')
 
     print('Committing session...')
+    # not sure if this is neccessary when using bulk_save, but it doesn't break
+    # anything so i left it in for now
     session.commit()
     print('Done')
 
