@@ -2,12 +2,8 @@ import json
 from pprint import pprint
 import csv
 from geopy.distance import distance as dist
-import pandas as pd
+import time
 
-# def reencode(file):
-# 		yield file.decode('latin-1').encode('utf-8')
-#
-# stop_table = csv.reader(reencode(open('../../../stopinfo.csv')), delimiter=",", quotechar='"')
 
 b = open('../../../data/siri.20121106.csv')
 s = open('../../../stopinfo.csv')
@@ -38,11 +34,11 @@ for row in bus_table:
 	if row[b_jour_patt_id] != 'null' and row[b_jour_patt_id] != '':
 		print("J_ID is", row[b_jour_patt_id])
 		scheduled_stops = route_data[row[b_jour_patt_id]]['stops']
+		print(scheduled_stops)
 		for stops_row in stop_table:
-			if int(stops_row[s_stop_no]) in scheduled_stops:
+			if stops_row[s_stop_no] in scheduled_stops:
 				print('Found', stops_row[s_stop_no], 'at lat:', stops_row[s_lat], ', lon:', stops_row[s_lon])
-
-
+	time.sleep(3)
 # pprint(route_data)
 
 s.close()
