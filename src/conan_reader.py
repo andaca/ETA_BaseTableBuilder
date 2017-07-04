@@ -9,8 +9,8 @@ import pandas as pd
 #
 # stop_table = csv.reader(reencode(open('../../../stopinfo.csv')), delimiter=",", quotechar='"')
 
-b = open('../../../data/siri.20121106.csv')
-s = open('../../../stopinfo.csv')
+b = open('../data/siri.20121106.csv')
+s = open('../data/stopinfo.csv')
 bus_table = csv.reader(b)
 stop_table = csv.reader(s)
 
@@ -18,8 +18,8 @@ stop_table = csv.reader(s)
 # df = df[pd.notnull(df[3])]
 
 
-with open('../../../routes.txt') as data_file:
-	route_data = json.load(data_file)
+with open('../data/routes.txt') as data_file:
+    route_data = json.load(data_file)
 
 # BusRecord = namedtuple('BusRecord',
 #                        ['timestamp', 'lineId', 'direction', 'journeyPatternId',
@@ -35,12 +35,13 @@ s_num, s_name, s_locality, s_locality_num, s_stop_no, s_easting, s_northing, s_l
 
 
 for row in bus_table:
-	if row[b_jour_patt_id] != 'null' and row[b_jour_patt_id] != '':
-		print("J_ID is", row[b_jour_patt_id])
-		scheduled_stops = route_data[row[b_jour_patt_id]]['stops']
-		for stops_row in stop_table:
-			if int(stops_row[s_stop_no]) in scheduled_stops:
-				print('Found', stops_row[s_stop_no], 'at lat:', stops_row[s_lat], ', lon:', stops_row[s_lon])
+    if row[b_jour_patt_id] != 'null' and row[b_jour_patt_id] != '':
+        print("J_ID is", row[b_jour_patt_id])
+        scheduled_stops = route_data[row[b_jour_patt_id]]['stops']
+        for stops_row in stop_table:
+            if int(stops_row[s_stop_no]) in scheduled_stops:
+                print('Found', stops_row[s_stop_no], 'at lat:',
+                      stops_row[s_lat], ', lon:', stops_row[s_lon])
 
 
 # pprint(route_data)
