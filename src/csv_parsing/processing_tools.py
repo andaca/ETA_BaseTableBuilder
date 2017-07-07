@@ -1,32 +1,36 @@
 from collections import defaultdict
 import csv
-
 import gzip
+import json
 
-"""
-def read_csv(filename, named_tuple=None):
-    \"""Generator function. Reads a CSV file(optionally gzipped) and yields it's
-    contents. If a named_tuple is passed, the rows are returned as those. Else
-    returned as lists.
 
-    @params: filename(str), named_tuple(namedtuple, declared in the 'collections' module)
-    @yields: lists or namedtuple
-    @raises: ValueError
-    \"""
-    if filename.endswith('gz'):
-        f = gzip.open(filename, 'rt')
-    elif filename.endswith('csv'):
-        f = open(filename, 'rt', newline='')
+class Cfg:
+    weather_file = '../../data/weather_output.csv'
+    stops_file = '../../data/stopinfo.csv'
+    jpId_stops_file = '../../data/routes.txt'
+
+
+# Useful functions -------------------------------------
+
+def bin_time(dt):
+    if dt.hour <= 4:
+        return 'early_am'
+    elif dt.hour >= 5 and dt.hour <= 12:
+        return 'am'
+    elif dt.hour >= 13 and dt.hour <= 20:
+        return 'pm'
+    elif dt.hour >= 21:
+        return 'late_pm'
     else:
-        raise ValueError('{} is not a csv or gz file'.format(filename))
-    reader = csv.reader(f)
-    for row in reader:
-        if named_tuple is not None:
-            yield named_tuple(*row)
-        else:
-            yield row
-    f.close()
-"""
+        raise ValueError('Invalid Hour')
+
+
+def init_coroutine(coroutine, *args):
+    """takes a coroutine and optional parameters to be passed, returns a primed
+    instance of the coroutine"""
+    c = coroutine() if not args else coroutine(*args)
+    next(c)
+    return c
 
 
 def read_csv(fname):
@@ -36,53 +40,61 @@ def read_csv(fname):
             yield row
 
 
-def add_weather(rows, error_writer=None, weather_file='../../data/weather_output.csv', ):
-    """TODO: Can I move the file reading portion out of the function,
-    so it only gets called at import time?"""
+def csv_writer_coroutine(fname, close_sig='CLOSE'):
+    """Coroutine. Opens specified file for writing as csv. waits to receive rows
+    (lists) by the send() method. File is closed when 'CLOSE' is sent.
+    @raises :  StopIteration
+    """
+    with open(fname, 'wt') as f:
+        writer = csv.writer(f)
+        while True:
+            row = yield
+            if row == close_sig:
+                f.close()
+                break
+            writer.writerow(row)
 
-    # read weather data from csv file
-    weather_dict = defaultdict(list)
-    for row in list(read_csv(weather_file)):
-        key = ':'.join([row[0], row[1]])  # date, and time_bin
-        print(key)
-        input()
-        weather_dict[key].extend(row[2:])
 
-    print(weather_dict)
-    input()
+# functions and constants to get various data from files ---------
+# DO NOT IMPORT DIRECTLY. Import constants defined in next section.
+
+def __get_weather_data():
+    """Returns the weather data in the format of:
+    {DD/MM/YYYY: {TIME_BIN: [cloud, rain, temp, wind]}}
+    """
+    weather = defaultdict(lambda: defaultdict(list))
+    rows = read_csv(Cfg.weather_file)
+    next(rows)  # first line is the column headers
     for row in rows:
-        date_str = row['dt'].strftime('%d/%m/%Y')
+        weather[row[0]][row[1]] = row[2:]
 
-        try:
-            if row['dt'].hour >= 5 and row['dt'].hour <= 12:
-                weather = weather_dict[date_str]['am']
+    return weather
 
-            elif row['dt'].hour >= 13 and row['dt'].hour <= 20:
-                weather = weather_dict[date_str]['pm']
 
-            else:
-                weather = weather_dict[date_str]['night']
+def __get_stop_coords():
+    """Returns a dict of {str(stopId) : [str(lat), str(lon)]}"""
+    stops = read_csv(Cfg.stops_file)
 
-        except KeyError as e:
-            if error_writer:
-                err_str = '{} :: {}'.format(e, row)
-                error_writer.send(row)
-            else:
-                print('{} :: {}'.format(e, row))
+    # dict keys of the stopId, value is [lat, lon] list
+    d = defaultdict(list)
 
-            print(date_str)
-            print(row['dt'].hour)
-            try:
-                print(weather_dict[date_str])
-            except KeyError:
-                print('date not in dict')
-            input()
-            yield None
-            continue
+    for r in stops:
+        d[str(r[4])] = [str(r[7]), str(r[8])]
 
-        row['cloud'] = weather[0]
-        row['rain'] = weather[1]
-        row['temp'] = weather[2]
-        row['wind'] = weather[3]
+    return d
 
-        yield row
+
+def __get_journey_pattern_id_stops():
+    """Returns a dict of {str(vjId): [ str(stopId) ]"""
+    with open(Cfg.jpId_stops_file) as f:
+        routes = json.load(f)
+        d = defaultdict(list)
+        for jpId, v in routes.items():
+            d[str(jpId)] = [str(stopId) for stopId in v['stops']]
+    return d
+
+
+# Constants for easy imports ------------------------------
+WEATHER_DATA = __get_weather_data()
+STOP_COORDS = __get_stop_coords()
+JOURNEY_PATTERN_ID_STOPS = __get_journey_pattern_id_stops()

@@ -14,15 +14,7 @@ def read_csv(fname):
             yield row
 
 
-def init_coroutine(coroutine, *args):
-    """takes a coroutine and optional parameters to be passed, returns a primed
-    instance of the coroutine"""
-    c = coroutine() if not args else coroutine(*args)
-    next(c)
-    return c
-
-
-def csv_writer(fname):
+def csv_writer_coroutine(fname, close_sig='CLOSE'):
     """Coroutine. Opens specified file for writing as csv. waits to receive rows 
     (lists) by the send() method. File is closed when 'CLOSE' is sent.
     @raises :  StopIteration
@@ -31,7 +23,8 @@ def csv_writer(fname):
         writer = csv.writer(f)
         while True:
             row = yield
-            if row == 'CLOSE':
+            if row == close_sig:
+                f.close()
                 break
             writer.writerow(row)
 
