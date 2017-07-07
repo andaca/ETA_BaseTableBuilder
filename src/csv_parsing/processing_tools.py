@@ -43,8 +43,12 @@ def read_csv(fname):
 def csv_writer_coroutine(fname, close_sig='CLOSE'):
     """Coroutine. Opens specified file for writing as csv. waits to receive rows
     (lists) by the send() method. File is closed when 'CLOSE' is sent.
+    @args:
+        fname (str) *file name*
     @raises :  StopIteration
+
     """
+    count = 0
     with open(fname, 'wt') as f:
         writer = csv.writer(f)
         while True:
@@ -53,6 +57,8 @@ def csv_writer_coroutine(fname, close_sig='CLOSE'):
                 f.close()
                 break
             writer.writerow(row)
+            print('\r {:,g} rows written'.format(count), end='')
+            count += 1
 
 
 # functions and constants to get various data from files ---------

@@ -103,7 +103,8 @@ def handler(writer):
         data['running_dist'] = dist_calc.send((data['lat'], data['lon']))
         data['running_time'] = (data['dt'] - start_time).total_seconds()
 
-        writer.send(rowify(data))
+        if data['closest_stop'] is not None:
+            writer.send(rowify(data))
 
 
 # for debugging purposes
@@ -137,8 +138,10 @@ def process(rows):
 
     # use a coroutine for a csv writer to ensure the file is only opened once,
     # and written to by only one function
-    writer = init_coroutine(csv_writer_coroutine, 'formed_data.csv')
-    #writer = init_coroutine(print_coroutine)
+    writer = init_coroutine(csv_writer_coroutine,
+                            '../../data/reduced_data.csv')
+
+    # writer = init_coroutine(print_coroutine)  #write to screen instead of file
 
     columns = ['dt', 'line', 'jpId', 'timeframe', 'vjId', 'lat', 'lon', 'delay',
                'blockId', 'stopId', 'atStop', 'running_dist', 'running_time',
@@ -159,7 +162,11 @@ def process(rows):
     # looping with many input csv files)
     for h in handlers.values():
         h.close()
-    writer.send('CLOSE')
+
+    try:
+        writer.send('CLOSE')
+    except StopIteration:
+        print('\nDone.')
 
 
 if __name__ == '__main__':
