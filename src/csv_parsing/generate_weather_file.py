@@ -6,12 +6,16 @@ from processing_tools import read_csv
 
 def bin_by_hour(data):
     for d in data:
-        if d['hour'] >= 5 and d['hour'] <= 12:
+        if d['hour'] <= 4:
+            d['t_bin'] = 'early_am'
+        elif d['hour'] >= 5 and d['hour'] <= 12:
             d['t_bin'] = 'am'
         elif d['hour'] >= 13 and d['hour'] <= 20:
-            d['t_bin'] = 'pgit m'
+            d['t_bin'] = 'pm'
+        elif d['hour'] >= 21:
+            d['t_bin'] = 'late_pm'
         else:
-            d['t_bin'] = 'night'
+            raise ValueError('Invalid Hour')
         yield d
 
 
@@ -20,8 +24,9 @@ def batch_it(data):
     for d in data:
         if d['t_bin'] != batch[-1]['t_bin'] or d['date'] != batch[-1]['date']:
             yield batch
-            batch_ = []
+            batch = []
         batch.append(d)
+    yield batch
 
 
 def make_rows(batches):
@@ -42,7 +47,7 @@ def make_rows(batches):
 
 
 def main():
-    rows = read_csv('../data/hly532/hly532.csv')
+    rows = read_csv('../../data/hly532/hly532.csv')
     # select relevant months
 
     rows = filter(
@@ -58,13 +63,15 @@ def main():
     } for row in rows)
 
     data = bin_by_hour(data)
+
     batches = batch_it(data)
 
     rows = make_rows(batches)
 
     print('writing data...')
-    with open('../data/weather_output.csv', 'wt') as f:
+    with open('../../data/weather_output.csv', 'wt') as f:
         writer = csv.writer(f)
+        writer.writerow(['date', 'time_bin', 'cloud', 'rain', 'temp', 'wind'])
         for row in rows:
             writer.writerow(row)
     print('Done.')
