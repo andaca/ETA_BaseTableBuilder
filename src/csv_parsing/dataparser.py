@@ -101,6 +101,11 @@ def main():
     writer = coro_csv_writer(expanduser(
         '~/datasets/datafiles/busdata_improved.csv'))
 
+    columns = ['dt', 'line', 'jpId', 'timeframe', 'vjId', 'lat', 'lon', 'delay',
+               'blockId', 'stopId', 'atStop', 'running_dist', 'running_time',
+               'closest_stop', 'closest_stop_dist', 'cloud', 'rain', 'temp', 'wind']
+    writer.send(columns)  # write column headers
+
     # seperate datas by journeyPatternId, vehicleJourneyId and timeframe
     journey_parsers = {}
     for d in datas:
