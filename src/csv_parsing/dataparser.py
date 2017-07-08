@@ -48,7 +48,10 @@ def rowify(data):
 
 
 @coroutine
-def journey_handler(writer):
+def journey_parser(writer):
+    """Expects to receive data for a single journey. Calculates running distance
+    and running time. Writes rows to writer."""
+
     prev = yield
 
     running_dist = 0
@@ -94,21 +97,21 @@ def main():
     datas = ({**d, **nearest_stop(d, get_stops(d))}
              for d in datas)
 
-    #writer = coro_print()
+    # writer = coro_print()  # prints to screen for debugging.
     writer = coro_csv_writer(expanduser(
         '~/datasets/datafiles/busdata_improved.csv'))
 
     # seperate datas by journeyPatternId, vehicleJourneyId and timeframe
-    handlers = {}
+    journey_parsers = {}
     for d in datas:
         key = ':'.join([d['jpId'], d['vjId'], d['timeframe']])
         try:
-            handlers[key].send(d)
+            journey_parsers[key].send(d)
         except KeyError:
-            handlers[key] = journey_handler(writer)
-            handlers[key].send(d)
+            journey_parsers[key] = journey_parser(writer)
+            journey_parsers[key].send(d)
 
-        # TODO: clean up handlers
+        # TODO: Clean up handlers. Remove old ones once the journey has ended.
 
     try:
         writer.send(StopIteration)
