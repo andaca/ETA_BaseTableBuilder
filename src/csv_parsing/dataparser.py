@@ -3,7 +3,7 @@ from os.path import expanduser
 
 from geopy.distance import distance
 
-from data_utils import read_csv, grow_dict, coroutine, coro_csv_writer, coro_print
+from data_utils import read_csv, coroutine, coro_csv_writer, coro_print
 from data_descriptors import bin_time, WEATHER_DATA, get_stops
 
 

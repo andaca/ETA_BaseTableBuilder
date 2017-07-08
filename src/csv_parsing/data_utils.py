@@ -2,12 +2,6 @@ import csv
 from functools import wraps
 
 
-def grow_dict(dictionary, keys, values):
-    for k, v in zip(keys, values):
-        dictionary[k] = v
-    return dictionary
-
-
 def read_csv(fname):
     with open(fname, 'rt', newline='') as f:
         reader = csv.reader(f)
